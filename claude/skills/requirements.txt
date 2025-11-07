@@ -1,0 +1,33 @@
+# Academic Manuscript Writing Agent - Python Dependencies
+
+# Environment Configuration
+python-dotenv>=1.0.0           # Load environment variables from .env file
+
+# Literature Search
+scholarly>=1.7.11              # Google Scholar search (unofficial but functional)
+requests>=2.31.0               # HTTP requests for OpenAlex, CrossRef APIs
+urllib3>=2.0.0                 # URL handling
+
+# PDF Processing
+pdfplumber>=0.10.0             # PDF text extraction (fallback)
+pypdf>=3.17.0                  # Alternative PDF library
+markdownify>=0.11.6            # HTML to markdown conversion
+
+# Document Conversion (MarkItDown - Microsoft)
+markitdown>=0.1.3              # Universal document-to-markdown converter
+pdfminer.six                   # PDF text extraction for MarkItDown
+mammoth>=1.11.0                # DOCX conversion
+python-pptx                    # PPTX conversion
+magika>=0.6.1                  # File type detection
+
+# Data Processing
+beautifulsoup4>=4.12.0         # HTML parsing
+lxml>=4.9.0                    # XML/HTML parser backend
+
+# Utilities
+python-dateutil>=2.8.2         # Date parsing
+tqdm>=4.66.0                   # Progress bars for long operations
+
+# Optional (for enhanced functionality)
+# scidownl>=1.0.0              # Scientific paper downloader (requires credentials)
+# habanero>=1.2.3              # CrossRef API wrapper (alternative to requests)
