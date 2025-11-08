@@ -1,0 +1,59 @@
+{
+  "query": "immune infiltration TNBC",
+  "max_oa": 1,
+  "timestamp": "2025-11-08T09:56:32.654157",
+  "total_results": 2,
+  "open_access_count": 1,
+  "papers": [
+    {
+      "title": "Inhibiting intracellular CD28 in cancer cells enhances antitumor immunity and overcomes anti-PD-1 resistance via targeting PD-L1.",
+      "authors": [
+        "Zhen Yang",
+        "Xinpeng Liu",
+        "Jun Zhu",
+        "Yangyang Chai",
+        "Boyi Cong",
+        "Bo Li",
+        "Wanfeng Gao",
+        "Ye Hu",
+        "Mingyue Wen",
+        "Yanfang Liu",
+        "Li Fu",
+        "Xuetao Cao"
+      ],
+      "year": 2025,
+      "journal": "Cancer cell",
+      "abstract": "Deciphering mechanisms for cancer immune escape may provide targets for improving immunotherapy efficacy. By in vivo genome-wide CRISPR loss-of-function screening in a mouse model of triple negative breast cancer (TNBC), we uncovered a non-classical function of Cd28 in cancer cells to promote immune escape. Knocking out Cd28 in cancer cells increased infiltration of type I conventional DC (cDC1) and activated tumor-specific CD8",
+      "citations": 0,
+      "doi": "10.1016/j.ccell.2024.11.008",
+      "pmid": "39672166",
+      "pmcid": "",
+      "is_open_access": false,
+      "url": "https://pubmed.ncbi.nlm.nih.gov/39672166/",
+      "pdf_url": "",
+      "source": "pubmed"
+    },
+    {
+      "title": "Triple-Negative Breast Cancer and Predictive Markers of Response to Neoadjuvant Chemotherapy: A Systematic Review.",
+      "authors": [
+        "Nadine S van den Ende",
+        "Anh H Nguyen",
+        "Agnes Jager",
+        "Marleen Kok",
+        "Reno Debets",
+        "Carolien H M van Deurzen"
+      ],
+      "year": 2023,
+      "journal": "International journal of molecular sciences",
+      "abstract": "Around 40-50% of all triple-negative breast cancer (TNBC) patients achieve a pathological complete response (pCR) after treatment with neoadjuvant chemotherapy (NAC). The identification of biomarkers predicting the response to NAC could be helpful for personalized treatment. This systematic review provides an overview of putative biomarkers at baseline that are predictive for a pCR following NAC. Embase, Medline and Web of Science were searched for articles published between January 2010 and August 2022. The articles had to meet the following criteria: patients with primary invasive TNBC without distant metastases and patients must have received NAC. In total, 2045 articles were screened by two reviewers resulting in the inclusion of 92 articles. Overall, the most frequently reported biomarkers associated with a pCR were a high expression of Ki-67, an expression of PD-L1 and the abundance of tumor-infiltrating lymphocytes, particularly CD8+ T cells, and corresponding immune gene signatures. In addition, our review reveals proteomic, genomic and transcriptomic markers that relate to cancer cells, the tumor microenvironment and the peripheral blood, which also affect chemo-sensitivity. We conclude that a prediction model based on a combination of tumor and immune markers is likely to better stratify TNBC patients with respect to NAC response.",
+      "citations": 0,
+      "doi": "10.3390/ijms24032969",
+      "pmid": "36769287",
+      "pmcid": "PMC9918290",
+      "is_open_access": true,
+      "url": "https://pubmed.ncbi.nlm.nih.gov/36769287/",
+      "pdf_url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9918290/pdf/",
+      "source": "pubmed"
+    }
+  ]
+}

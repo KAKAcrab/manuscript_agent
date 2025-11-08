@@ -1,0 +1,41 @@
+{
+  "workflow_version": "1.0",
+  "initialized": "2025-11-07T16:03:44Z",
+  "current_phase": "PHASE_0",
+  "phase_status": "completed",
+  "configuration": {
+    "input_report": "/Users/yangyuhang/Obsidian/METIS/B/03.Manuscript_Agent/TNBC预后结果报告.docx",
+    "target_journal": "nature-comms",
+    "output_directory": "/Users/yangyuhang/Obsidian/METIS/B/03.Manuscript_Agent/manuscript_11072333",
+    "quality_threshold": 0.75,
+    "draft_mode": false,
+    "parse_images": true
+  },
+  "journal_template": {
+    "name": "Nature Communications",
+    "abbreviation": "Nat Commun",
+    "impact_factor": 16.6,
+    "abstract_word_limit": 200,
+    "main_text_recommended": "5000-8000 words",
+    "reference_style": "numbered",
+    "max_figures": 8
+  },
+  "phase_completion": {
+    "PHASE_0": "completed",
+    "PHASE_0.5": "pending",
+    "PHASE_1": "pending",
+    "PHASE_2": "pending",
+    "PHASE_3": "pending",
+    "PHASE_4": "pending",
+    "PHASE_5": "pending",
+    "PHASE_6": "pending",
+    "PHASE_7": "pending",
+    "PHASE_8": "pending"
+  },
+  "statistics": {
+    "total_citations": 0,
+    "verified_citations": 0,
+    "extracted_images": 0,
+    "generated_sections": 0
+  }
+}

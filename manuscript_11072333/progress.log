@@ -1,0 +1,17 @@
+MANUSCRIPT GENERATION WORKFLOW - PROGRESS LOG
+==============================================
+Initialized: 2025-11-07T16:03:44Z
+Research Report: TNBC预后结果报告.docx
+Target Journal: Nature Communications
+Output Directory: manuscript_11072333/
+Quality Threshold: 0.75 (standard mode)
+Draft Mode: false
+Parse Images: true
+
+TIMESTAMP            | PHASE      | STATUS   | DETAILS
+==========================================================
+2025-11-07 16:03:44 | PHASE_0    | STARTED  | Environment initialization
+2025-11-07 16:03:44 | PHASE_0    | SUCCESS  | Directory structure created
+2025-11-07 16:03:44 | PHASE_0    | SUCCESS  | Citation database initialized
+2025-11-07 16:03:44 | PHASE_0    | SUCCESS  | Journal template loaded (Nature Communications)
+[2025-11-08 09:04:50] Phase 0.5 completed: Report content extracted (207 lines), 5 figures analyzed (37 subplots), publication-grade captions generated
