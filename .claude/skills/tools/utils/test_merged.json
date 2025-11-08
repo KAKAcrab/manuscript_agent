@@ -1,0 +1,181 @@
+{
+  "papers": [
+    {
+      "title": "Deep learning",
+      "authors": [
+        "Yann LeCun",
+        "Yoshua Bengio",
+        "Geoffrey E. Hinton"
+      ],
+      "year": 2015,
+      "journal": "Nature",
+      "abstract": "",
+      "citations": 71737,
+      "doi": "10.1038/nature14539",
+      "url": "https://openalex.org/W2919115771",
+      "pdf_url": "",
+      "open_access": false,
+      "source": "openalex"
+    },
+    {
+      "title": "Artificial neural networks for speech and vision",
+      "authors": [
+        "Richard J. Mammone"
+      ],
+      "year": 1994,
+      "journal": "Chapman & Hall eBooks",
+      "abstract": "Neural Networks for speech processing. Neural Networks in the acquisition of speech by machine. The nervous system - fantasy and reality. Processing of complex stimuli in the mammalian cochlear nucleus. On the possible role of auditory peripheral feedback in the representation of speech sounds. Is there a role for neural networks in speech recognition? The neurosphysiology of world reading - a connectionist approach. Status versus stacks - representing grammatical strucure in a recurrent neural network. Connections and associations in language acquisition. Some relationships between artificial neural nets and hidden markov models. A learning neural tree for phoneme classification. Decision feedback learning of neural networks. Visual focus of attention in language acquisition. Integrated segmentation and recognition of handprinted characters. Neural net image analysis for postal applications - from locating address blocks to determining zip codes. Space invariant active vision. Engineering document processing with neural networks. Goal-oriented training of neural networks. Hybrid neural networks and image restoration. Dynamic systems and perception. Deterministic annealing for optimization. Neural networks in vision. A neural chip set for supervised learning and CAM. A discrete radon transform method for invariant image analysis using artificial neural networks. Recurrent neural networks and sequential machines. Non-literal transfer of information among inductive learners. Neural networks for identification and control of nonlinear systems. Using neural networks to identify DNA sequences.",
+      "citations": 216,
+      "doi": null,
+      "url": "https://openalex.org/W566184825",
+      "pdf_url": "",
+      "open_access": false,
+      "source": "openalex"
+    },
+    {
+      "title": "Rule Extraction: From Neural Architecture to Symbolic Representation",
+      "authors": [
+        "Gail A. Carpenter",
+        "Ah\u2010Hwee Tan"
+      ],
+      "year": 1995,
+      "journal": "Connection Science",
+      "abstract": "Abstract This paper shows how knowledge, in the form of fuzzy rules, can be derived from a supervised learning neural network called fuzzy ARTMAP. Rule extraction proceeds in two stages: pruning, which simplifies the network structure by removing excessive recognition categories and weights; and quantization of continuous learned weights, which allows the final system state to be translated into a usable set of descriptive rules. Three benchmark studies illustrate the rule extraction methods: (1) Pima Indian diabetes diagnosis, (2) mushroom classification and (3) DNA promoter recognition. Fuzzy ARTMAP and ART-EMAP are compared with the ADAP algorithm, the k nearest neighbor system, the back-propagation network and the C4.5 decision tree. The ARTMAP rule extraction procedure is also compared with the Knowledgetron and NOFM algorithms, which extract rules from back-propagation networks. Simulation results consistently indicate that ARTMAP rule extraction produces compact sets of comprehensible rules for which accuracy and complexity compare favorably to rules extracted by alternative algorithms. KEYWORDS: Fuzzy ARTMAPruleconfidence factorpruning. Additional informationNotes on contributorsGAIL A. CARPENTER E-mail: gail@cns.bu.edu and ahhwee@iss.nus.sg. AH-HWEE TAN E-mail: gail@cns.bu.edu and ahhwee@iss.nus.sg.",
+      "citations": 154,
+      "doi": "10.1080/09540099508915655",
+      "url": "https://openalex.org/W2025746315",
+      "pdf_url": "https://ink.library.smu.edu.sg/sis_research/6281",
+      "open_access": true,
+      "source": "openalex"
+    },
+    {
+      "title": "Deep learning as a tool for ecology and evolution",
+      "authors": [
+        "Marek L. Borowiec",
+        "Rebecca B. Dikow",
+        "Paul B. Frandsen",
+        "Alexander J. McKeeken",
+        "Gabriele Valentini",
+        "Alexander E. White"
+      ],
+      "year": 2022,
+      "journal": "Methods in Ecology and Evolution",
+      "abstract": "Abstract Deep learning is driving recent advances behind many everyday technologies, including speech and image recognition, natural language processing and autonomous driving. It is also gaining popularity in biology, where it has been used for automated species identification, environmental monitoring, ecological modelling, behavioural studies, DNA sequencing and population genetics and phylogenetics, among other applications. Deep learning relies on artificial neural networks for predictive modelling and excels at recognizing complex patterns. In this review we synthesize 818 studies using deep learning in the context of ecology and evolution to give a discipline\u2010wide perspective necessary to promote a rethinking of inference approaches in the field. We provide an introduction to machine learning and contrast it with mechanistic inference, followed by a gentle primer on deep learning. We review the applications of deep learning in ecology and evolution and discuss its limitations and efforts to overcome them. We also provide a practical primer for biologists interested in including deep learning in their toolkit and identify its possible future applications. We find that deep learning is being rapidly adopted in ecology and evolution, with 589 studies (64%) published since the beginning of 2019. Most use convolutional neural networks (496 studies) and supervised learning for image identification but also for tasks using molecular data, sounds, environmental data or video as input. More sophisticated uses of deep learning in biology are also beginning to appear. Operating within the machine learning paradigm, deep learning can be viewed as an alternative to mechanistic modelling. It has desirable properties of good performance and scaling with increasing complexity, while posing unique challenges such as sensitivity to bias in input data. We expect that rapid adoption of deep learning in ecology and evolution will continue, especially in automation of biodiversity monitoring and discovery and inference from genetic data. Increased use of unsupervised learning for discovery and visualization of clusters and gaps, simplification of multi\u2010step analysis pipelines, and integration of machine learning into graduate and postgraduate training are all likely in the near future.",
+      "citations": 191,
+      "doi": "10.1111/2041-210x.13901",
+      "url": "https://openalex.org/W4281728047",
+      "pdf_url": "https://onlinelibrary.wiley.com/doi/pdfdirect/10.1111/2041-210X.13901",
+      "open_access": true,
+      "source": "openalex"
+    },
+    {
+      "title": "Learning Speaker-Specific Characteristics With a Deep Neural Architecture",
+      "authors": [
+        "Ke Chen",
+        "Ahmad Salman"
+      ],
+      "year": 2011,
+      "journal": "IEEE Transactions on Neural Networks",
+      "abstract": "Speech signals convey various yet mixed information ranging from linguistic to speaker-specific information. However, most of acoustic representations characterize all different kinds of information as whole, which could hinder either a speech or a speaker recognition (SR) system from producing a better performance. In this paper, we propose a novel deep neural architecture (DNA) especially for learning speaker-specific characteristics from mel-frequency cepstral coefficients, an acoustic representation commonly used in both speech recognition and SR, which results in a speaker-specific overcomplete representation. In order to learn intrinsic speaker-specific characteristics, we come up with an objective function consisting of contrastive losses in terms of speaker similarity/dissimilarity and data reconstruction losses used as regularization to normalize the interference of non-speaker-related information. Moreover, we employ a hybrid learning strategy for learning parameters of the deep neural networks: i.e., local yet greedy layerwise unsupervised pretraining for initialization and global supervised learning for the ultimate discriminative goal. With four Linguistic Data Consortium (LDC) benchmarks and two non-English corpora, we demonstrate that our overcomplete representation is robust in characterizing various speakers, no matter whether their utterances have been used in training our DNA, and highly insensitive to text and languages spoken. Extensive comparative studies suggest that our approach yields favorite results in speaker verification and segmentation. Finally, we discuss several issues concerning our proposed approach.",
+      "citations": 116,
+      "doi": "10.1109/tnn.2011.2167240",
+      "url": "https://openalex.org/W2109761419",
+      "pdf_url": "https://pure.manchester.ac.uk/ws/files/54522602/FULL_TEXT.PDF",
+      "open_access": true,
+      "source": "openalex"
+    },
+    {
+      "title": "Chromatin accessibility prediction via convolutional long short-term memory networks with k-mer embedding",
+      "authors": [
+        "Min Xu",
+        "Wanwen Zeng",
+        "Ning Chen",
+        "Ting Chen",
+        "Rui Jiang"
+      ],
+      "year": 2017,
+      "journal": "Bioinformatics",
+      "abstract": "Experimental techniques for measuring chromatin accessibility are expensive and time consuming, appealing for the development of computational approaches to predict open chromatin regions from DNA sequences. Along this direction, existing methods fall into two classes: one based on handcrafted k -mer features and the other based on convolutional neural networks. Although both categories have shown good performance in specific applications thus far, there still lacks a comprehensive framework to integrate useful k -mer co-occurrence information with recent advances in deep learning.We fill this gap by addressing the problem of chromatin accessibility prediction with a convolutional Long Short-Term Memory (LSTM) network with k -mer embedding. We first split DNA sequences into k -mers and pre-train k -mer embedding vectors based on the co-occurrence matrix of k -mers by using an unsupervised representation learning approach. We then construct a supervised deep learning architecture comprised of an embedding layer, three convolutional layers and a Bidirectional LSTM (BLSTM) layer for feature learning and classification. We demonstrate that our method gains high-quality fixed-length features from variable-length sequences and consistently outperforms baseline methods. We show that k -mer embedding can effectively enhance model performance by exploring different embedding strategies. We also prove the efficacy of both the convolution and the BLSTM layers by comparing two variations of the network architecture. We confirm the robustness of our model to hyper-parameters by performing sensitivity analysis. We hope our method can eventually reinforce our understanding of employing deep learning in genomic studies and shed light on research regarding mechanisms of chromatin accessibility.The source code can be downloaded from https://github.com/minxueric/ismb2017_lstm .tingchen@tsinghua.edu.cn or ruijiang@tsinghua.edu.cn.Supplementary materials are available at Bioinformatics online.",
+      "citations": 121,
+      "doi": "10.1093/bioinformatics/btx234",
+      "url": "https://openalex.org/W2736280136",
+      "pdf_url": "https://academic.oup.com/bioinformatics/article-pdf/33/14/i92/25157018/btx234.pdf",
+      "open_access": true,
+      "source": "openalex"
+    },
+    {
+      "title": "Modeling in-vivo protein-DNA binding by combining multiple-instance learning with a hybrid deep neural network",
+      "authors": [
+        "Qinhu Zhang",
+        "Zhen Shen",
+        "De-Shuang Huang"
+      ],
+      "year": 2019,
+      "journal": "Scientific Reports",
+      "abstract": "Modeling in-vivo protein-DNA binding is not only fundamental for further understanding of the regulatory mechanisms, but also a challenging task in computational biology. Deep-learning based methods have succeed in modeling in-vivo protein-DNA binding, but they often (1) follow the fully supervised learning framework and overlook the weakly supervised information of genomic sequences that a bound DNA sequence may has multiple TFBS(s), and, (2) use one-hot encoding to encode DNA sequences and ignore the dependencies among nucleotides. In this paper, we propose a weakly supervised framework, which combines multiple-instance learning with a hybrid deep neural network and uses k-mer encoding to transform DNA sequences, for modeling in-vivo protein-DNA binding. Firstly, this framework segments sequences into multiple overlapping instances using a sliding window, and then encodes all instances into image-like inputs of high-order dependencies using k-mer encoding. Secondly, it separately computes a score for all instances in the same bag using a hybrid deep neural network that integrates convolutional and recurrent neural networks. Finally, it integrates the predicted values of all instances as the final prediction of this bag using the Noisy-and method. The experimental results on in-vivo datasets demonstrate the superior performance of the proposed framework. In addition, we also explore the performance of the proposed framework when using k-mer encoding, and demonstrate the performance of the Noisy-and method by comparing it with other fusion methods, and find that adding recurrent layers can improve the performance of the proposed framework.",
+      "citations": 71,
+      "doi": "10.1038/s41598-019-44966-x",
+      "url": "https://openalex.org/W2949275670",
+      "pdf_url": "https://www.nature.com/articles/s41598-019-44966-x.pdf",
+      "open_access": true,
+      "source": "openalex"
+    },
+    {
+      "title": "Block-Wisely Supervised Neural Architecture Search With Knowledge Distillation",
+      "authors": [
+        "Changlin Li",
+        "Jiefeng Peng",
+        "Liuchun Yuan",
+        "Guangrun Wang",
+        "Xiaodan Liang",
+        "Liang Lin",
+        "Xiaojun Chang"
+      ],
+      "year": 2020,
+      "journal": "2022 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)",
+      "abstract": "Neural Architecture Search (NAS), aiming at automatically designing network architectures by machines, is expected to bring about a new revolution in machine learning. Despite these high expectation, the effectiveness and efficiency of existing NAS solutions are unclear, with some recent works going so far as to suggest that many existing NAS solutions are no better than random architecture selection. The ineffectiveness of NAS solutions may be attributed to inaccurate architecture evaluation. Specifically, to speed up NAS, recent works have proposed under-training different candidate architectures in a large search space concurrently by using shared network parameters; however, this has resulted in incorrect architecture ratings and furthered the ineffectiveness of NAS. In this work, we propose to modularize the large search space of NAS into blocks to ensure that the potential candidate architectures are fully trained; this reduces the representation shift caused by the shared parameters and leads to the correct rating of the candidates. Thanks to the block-wise search, we can also evaluate all of the candidate architectures within each block. Moreover, we find that the knowledge of a network model lies not only in the network parameters but also in the network architecture. Therefore, we propose to distill the neural architecture (DNA) knowledge from a teacher model to supervise our block-wise architecture search, which significantly improves the effectiveness of NAS. Remarkably, the performance of our searched architectures has exceeded the teacher model, demonstrating the practicability of our method. Finally, our method achieves a state-of-the-art 78.4% top-1 accuracy on ImageNet in a mobile setting. All of our searched models along with the evaluation code are available at https://github.com/changlin31/DNA.",
+      "citations": 172,
+      "doi": "10.1109/cvpr42600.2020.00206",
+      "url": "https://openalex.org/W3034528892",
+      "pdf_url": "http://arxiv.org/pdf/1911.13053",
+      "open_access": true,
+      "source": "openalex"
+    },
+    {
+      "title": "Genome-wide prediction of cis-regulatory regions using supervised deep learning methods",
+      "authors": [
+        "Yifeng Li",
+        "Wenqiang Shi",
+        "Wyeth W. Wasserman"
+      ],
+      "year": 2018,
+      "journal": "BMC Bioinformatics",
+      "abstract": "In the human genome, 98% of DNA sequences are non-protein-coding regions that were previously disregarded as junk DNA. In fact, non-coding regions host a variety of cis-regulatory regions which precisely control the expression of genes. Thus, Identifying active cis-regulatory regions in the human genome is critical for understanding gene regulation and assessing the impact of genetic variation on phenotype. The developments of high-throughput sequencing and machine learning technologies make it possible to predict cis-regulatory regions genome wide. Based on rich data resources such as the Encyclopedia of DNA Elements (ENCODE) and the Functional Annotation of the Mammalian Genome (FANTOM) projects, we introduce DECRES based on supervised deep learning approaches for the identification of enhancer and promoter regions in the human genome. Due to their ability to discover patterns in large and complex data, the introduction of deep learning methods enables a significant advance in our knowledge of the genomic locations of cis-regulatory regions. Using models for well-characterized cell lines, we identify key experimental features that contribute to the predictive performance. Applying DECRES, we delineate locations of 300,000 candidate enhancers genome wide (6.8% of the genome, of which 40,000 are supported by bidirectional transcription data), and 26,000 candidate promoters (0.6% of the genome). The predicted annotations of cis-regulatory regions will provide broad utility for genome interpretation from functional genomics to clinical applications. The DECRES model demonstrates potentials of deep learning technologies when combined with high-throughput sequencing data, and inspires the development of other advanced neural network models for further improvement of genome annotations.",
+      "citations": 123,
+      "doi": "10.1186/s12859-018-2187-1",
+      "url": "https://openalex.org/W2951901532",
+      "pdf_url": "https://bmcbioinformatics.biomedcentral.com/track/pdf/10.1186/s12859-018-2187-1",
+      "open_access": true,
+      "source": "openalex"
+    },
+    {
+      "title": "Weakly-Supervised Convolutional Neural Network Architecture for Predicting Protein-DNA Binding",
+      "authors": [
+        "Qinhu Zhang",
+        "Lin Zhu",
+        "Wenzheng Bao",
+        "De-Shuang Huang"
+      ],
+      "year": 2018,
+      "journal": "IEEE/ACM Transactions on Computational Biology and Bioinformatics",
+      "abstract": "Although convolutional neural networks (CNN) have outperformed conventional methods in predicting the sequence specificities of protein-DNA binding in recent years, they do not take full advantage of the intrinsic weakly-supervised information of DNA sequences that a bound sequence may contain multiple TFBS(s). Here, we propose a weakly-supervised convolutional neural network architecture (WSCNN), combining multiple-instance learning (MIL) with CNN, to further boost the performance of predicting protein-DNA binding. WSCNN first divides each DNA sequence into multiple overlapping subsequences (instances) with a sliding window, and then separately models each instance using CNN, and finally fuses the predicted scores of all instances in the same bag using four fusion methods, including Max, Average, Linear Regression, and Top-Bottom Instances. The experimental results on in vivo and in vitro datasets illustrate the performance of the proposed approach. Moreover, models built on in vitro data using WSCNN can predict in vivo protein-DNA binding with good accuracy. In addition, we give a quantitative analysis of the importance of the reverse-complement mode in predicting in vivo protein-DNA binding, and explain why not directly use advanced pooling layers to combine MIL with CNN, through a series of experiments.",
+      "citations": 81,
+      "doi": "10.1109/tcbb.2018.2864203",
+      "url": "https://openalex.org/W2885815722",
+      "pdf_url": "",
+      "open_access": false,
+      "source": "openalex"
+    }
+  ],
+  "total": 10
+}

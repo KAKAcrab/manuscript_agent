@@ -1,0 +1,1316 @@
+#!/usr/bin/env python3
+"""
+文献下载与转换工具(Sci-Hub + PMC + MarkItDown集成版)
+
+功能:
+1. 通过Sci-Hub下载PDF (基于scihub-cn项目)
+2. 通过PMC OA Web Service获取XML全文
+3. 使用MarkItDown转换PDF/XML/DOCX等为Markdown
+
+使用方法:
+  # 单篇下载
+  python scihub_download.py download --doi "10.1038/nature12373" --output papers/
+
+  # 批量下载
+  python scihub_download.py batch --input validated_papers.json --output papers/
+
+  # 仅转换已下载文件
+  python scihub_download.py convert --input paper.pdf --output paper.md
+"""
+
+import argparse
+import json
+import os
+import re
+import sys
+import time
+import concurrent.futures
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+from urllib.parse import urljoin
+
+import requests
+from bs4 import BeautifulSoup
+
+# 可选依赖: PaddleOCR / PP-Structure / PyMuPDF / Pillow / NumPy
+PADDLE_AVAILABLE = False
+PPSTRUCT_AVAILABLE = False
+Fitz = None
+Image = None
+np = None
+try:
+    from paddleocr import PaddleOCR, PPStructure  # type: ignore
+    PADDLE_AVAILABLE = True
+    PPSTRUCT_AVAILABLE = True
+except Exception:
+    PADDLE_AVAILABLE = False
+    PPSTRUCT_AVAILABLE = False
+
+try:
+    import fitz as Fitz  # PyMuPDF
+except Exception:
+    Fitz = None
+
+try:
+    from PIL import Image as PILImage
+    Image = PILImage
+except Exception:
+    Image = None
+
+try:
+    import numpy as numpy
+    np = numpy
+except Exception:
+    np = None
+
+# 加载环境变量
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+# 配置
+SCIHUB_URLS = [
+    "https://sci-hub.se",
+    "https://sci-hub.st",
+    "https://sci-hub.ru",
+    "https://sci-hub.box",
+    "https://sci-hub.red",
+    "https://sci-hub.al",
+    "https://sci-hub.ee",
+    "https://sci-hub.ren",
+    "https://sci-hub.shop",
+    "https://sci-hub.vg",
+]
+
+PMC_OA_SERVICE = "https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi"
+PMC_ID_CONVERTER = "https://pmc.ncbi.nlm.nih.gov/tools/idconv/api/v1/articles/"
+NCBI_EMAIL = os.getenv("NCBI_EMAIL", "research@example.com")
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+}
+
+
+def download_via_scihub(identifier: str, output_path: str) -> bool:
+    """
+    通过Sci-Hub下载文献PDF
+
+    Args:
+        identifier: DOI、PMID或论文URL
+        output_path: PDF输出路径
+
+    Returns:
+        下载是否成功
+    """
+    print(f"[Sci-Hub] 尝试下载: {identifier}")
+
+    session = requests.Session()
+    session.headers.update(HEADERS)
+
+    for scihub_url in SCIHUB_URLS:
+        try:
+            print(f"[Sci-Hub] 使用镜像: {scihub_url}")
+
+            # 访问Sci-Hub页面
+            response = session.get(f"{scihub_url}/{identifier}", timeout=30)
+
+            if response.status_code != 200:
+                print(f"[Sci-Hub] 镜像访问失败: {response.status_code}")
+                continue
+
+            # 解析PDF链接
+            soup = BeautifulSoup(response.content, 'html.parser')
+
+            # 方法1: iframe中的PDF
+            iframe = soup.find('iframe', id='pdf')
+            if iframe and iframe.get('src'):
+                pdf_url = iframe['src']
+                if not pdf_url.startswith('http'):
+                    pdf_url = urljoin(scihub_url, pdf_url)
+
+                print(f"[Sci-Hub] 找到PDF链接: {pdf_url}")
+
+                # 下载PDF
+                pdf_response = session.get(pdf_url, timeout=60)
+                if pdf_response.status_code == 200 and pdf_response.content[:4] == b'%PDF':
+                    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+                    with open(output_path, 'wb') as f:
+                        f.write(pdf_response.content)
+                    print(f"[Sci-Hub] 下载成功: {output_path} ({len(pdf_response.content)} bytes)")
+                    return True
+
+            # 方法2: 嵌入式PDF链接
+            embed = soup.find('embed', {'type': 'application/pdf'})
+            if embed and embed.get('src'):
+                pdf_url = embed['src']
+                if not pdf_url.startswith('http'):
+                    pdf_url = urljoin(scihub_url, pdf_url)
+
+                print(f"[Sci-Hub] 找到PDF链接(embed): {pdf_url}")
+
+                pdf_response = session.get(pdf_url, timeout=60)
+                if pdf_response.status_code == 200 and pdf_response.content[:4] == b'%PDF':
+                    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+                    with open(output_path, 'wb') as f:
+                        f.write(pdf_response.content)
+                    print(f"[Sci-Hub] 下载成功: {output_path}")
+                    return True
+
+            # 方法3: 直接PDF按钮
+            button = soup.find('button', {'onclick': re.compile(r'location\.href')})
+            if button:
+                onclick = button.get('onclick', '')
+                pdf_match = re.search(r"location\.href='([^']+)'", onclick)
+                if pdf_match:
+                    pdf_url = pdf_match.group(1)
+                    if not pdf_url.startswith('http'):
+                        pdf_url = urljoin(scihub_url, pdf_url)
+
+                    print(f"[Sci-Hub] 找到PDF链接(button): {pdf_url}")
+
+                    pdf_response = session.get(pdf_url, timeout=60)
+                    if pdf_response.status_code == 200 and pdf_response.content[:4] == b'%PDF':
+                        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+                        with open(output_path, 'wb') as f:
+                            f.write(pdf_response.content)
+                        print(f"[Sci-Hub] 下载成功: {output_path}")
+                        return True
+
+            print(f"[Sci-Hub] 未找到有效PDF链接")
+
+        except Exception as e:
+            print(f"[Sci-Hub] 镜像错误: {e}")
+            continue
+
+    print(f"[Sci-Hub] 所有镜像均失败")
+    return False
+
+
+def convert_doi_to_pmid(doi: str) -> Optional[str]:
+    """
+    使用PMC ID Converter API将DOI转换为PMID
+
+    Args:
+        doi: DOI标识符
+
+    Returns:
+        PMID字符串,失败返回None
+    """
+    try:
+        # 构造API请求参数（tool和email为必填项）
+        params = {
+            "tool": "manuscript_agent",
+            "email": NCBI_EMAIL,
+            "ids": doi,
+            "idtype": "doi",
+            "format": "json"
+        }
+
+        response = requests.get(PMC_ID_CONVERTER, params=params, timeout=15)
+
+        if response.status_code != 200:
+            return None
+
+        data = response.json()
+
+        # 检查响应结构
+        if "records" in data and len(data["records"]) > 0:
+            record = data["records"][0]
+            pmid = record.get("pmid")
+            if pmid:
+                print(f"[PMC ID Converter] DOI {doi} → PMID {pmid}")
+                return pmid
+
+        return None
+
+    except Exception as e:
+        print(f"[PMC ID Converter] 转换失败: {e}")
+        return None
+
+
+def download_via_pmc(identifier: str, output_dir: str) -> Optional[str]:
+    """
+    通过PMC OA Web Service下载XML全文
+
+    Args:
+        identifier: DOI或PMID或PMCID
+        output_dir: 输出目录
+
+    Returns:
+        下载的文件路径,失败返回None
+    """
+    print(f"[PMC] 尝试获取XML: {identifier}")
+
+    try:
+        # 确定查询ID类型
+        query_id = identifier
+
+        # 如果是DOI，先转换为PMID
+        if identifier.startswith("10."):
+            pmid = convert_doi_to_pmid(identifier)
+            if pmid:
+                query_id = pmid
+            else:
+                print(f"[PMC] DOI转PMID失败，尝试直接使用DOI")
+
+        # 如果是纯数字的PMID（不是以PMC开头），先转换为PMCID
+        elif identifier.isdigit():
+            # 纯数字是PMID，需要转换为PMCID
+            pmid_to_pmcid_params = {
+                "tool": "manuscript_agent",
+                "email": NCBI_EMAIL,
+                "ids": identifier,
+                "idtype": "pmid",
+                "format": "json"
+            }
+            try:
+                id_response = requests.get(PMC_ID_CONVERTER, params=pmid_to_pmcid_params, timeout=15)
+                if id_response.status_code == 200:
+                    id_data = id_response.json()
+                    if "records" in id_data and len(id_data["records"]) > 0:
+                        pmcid = id_data["records"][0].get("pmcid")
+                        if pmcid:
+                            print(f"[PMC ID Converter] PMID {identifier} → PMCID {pmcid}")
+                            query_id = pmcid
+            except Exception as e:
+                print(f"[PMC] PMID转PMCID失败: {e}")
+
+        # 查询PMC ID
+        params = {
+            "id": query_id,
+            "format": "tgz"  # 获取完整文件包
+        }
+
+        response = requests.get(PMC_OA_SERVICE, params=params, timeout=30)
+
+        if response.status_code != 200:
+            print(f"[PMC] API请求失败: {response.status_code}")
+            return None
+
+        # 解析响应XML
+        from xml.etree import ElementTree as ET
+        root = ET.fromstring(response.content)
+
+        # 查找error
+        error = root.find('.//error')
+        if error is not None:
+            print(f"[PMC] API错误: {error.text}")
+            return None
+
+        # 查找link元素
+        link = root.find('.//link')
+        if link is None or 'href' not in link.attrib:
+            print(f"[PMC] 未找到下载链接")
+            return None
+
+        download_url = link.attrib['href']
+        pmcid = root.find('.//record').attrib.get('id', 'unknown')
+
+        # FTP链接转换为HTTPS (PMC支持HTTPS访问)
+        if download_url.startswith('ftp://ftp.ncbi.nlm.nih.gov'):
+            download_url = download_url.replace('ftp://ftp.ncbi.nlm.nih.gov', 'https://ftp.ncbi.nlm.nih.gov')
+
+        print(f"[PMC] PMCID: {pmcid}, 下载URL: {download_url}")
+
+        # 下载tar.gz文件
+        tgz_response = requests.get(download_url, timeout=60, stream=True)
+        if tgz_response.status_code != 200:
+            print(f"[PMC] 下载失败: {tgz_response.status_code}")
+            return None
+
+        # 保存并解压
+        import tarfile
+        import tempfile
+
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.tar.gz') as tmp_file:
+            for chunk in tgz_response.iter_content(chunk_size=8192):
+                tmp_file.write(chunk)
+            tmp_path = tmp_file.name
+
+        # 解压查找XML
+        extracted_xml = None
+        with tarfile.open(tmp_path, 'r:gz') as tar:
+            for member in tar.getmembers():
+                if member.name.endswith('.nxml') or member.name.endswith('.xml'):
+                    # 提取XML文件
+                    tar.extract(member, output_dir)
+                    extracted_xml = os.path.join(output_dir, member.name)
+                    print(f"[PMC] XML已提取: {extracted_xml}")
+                    break
+
+        # 清理临时文件
+        os.unlink(tmp_path)
+
+        if extracted_xml:
+            # 移动到标准位置
+            final_path = os.path.join(output_dir, f"{pmcid}.xml")
+            if extracted_xml != final_path:
+                os.rename(extracted_xml, final_path)
+                extracted_xml = final_path
+
+            return extracted_xml
+        else:
+            print(f"[PMC] tar.gz中未找到XML文件")
+            return None
+
+    except Exception as e:
+        print(f"[PMC] 下载错误: {e}")
+        return None
+
+
+# ------------------------
+# 转换辅助与实现
+# ------------------------
+
+DEFAULT_SECTIONS = [
+    "title",
+    "authors",
+    "abstract",
+    "introduction",
+    "methods",
+    "results",
+    "discussion",
+    "conclusion",
+]
+
+DEFAULT_STOP_AFTER = [
+    "reference", "references",
+    "acknowledgement", "acknowledgements",
+    "acknowledgment", "acknowledgments",
+    "supplement", "supplemental", "supplementary", "supplementary material", "supplementary materials",
+    "appendix", "appendices",
+]
+
+def _is_stop_heading(text: str) -> bool:
+    """仅当文本像章节标题时才触发早停（避免正文误截断）。"""
+    if not text:
+        return False
+    t = text.strip().lower()
+    if len(t) > 80:
+        return False
+    import re as _re
+    return bool(_re.match(r"^[\s\(\)\[\]\-–—:,.0-9ivx]{0,8}\b(references?|acknowledg(e)?ments?|supplement(ar|al)( materials?)?|supplementary( materials?)?|appendix|appendices)\b[\s\-–—:,.]*$",
+                           t, flags=_re.I))
+
+def _convert_pdf_with_pymupdf4llm(
+    input_pdf: str,
+    output_md: str,
+    keep_sections: Optional[List[str]] = None,
+    stop_after: Optional[List[str]] = None,
+) -> bool:
+    """使用 PyMuPDF4LLM 将PDF转换为Markdown，并按主体章节进行裁剪。"""
+    try:
+        import pymupdf4llm
+    except Exception:
+        return False
+    try:
+        md_text = pymupdf4llm.to_markdown(input_pdf)
+        if not md_text or not md_text.strip():
+            return False
+        trimmed = _post_trim_markdown(md_text, keep_sections or DEFAULT_SECTIONS, stop_after or DEFAULT_STOP_AFTER)
+        Path(output_md).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_md).write_text(trimmed, encoding='utf-8')
+        print(f"[Convert] PDF转换成功(PyMuPDF4LLM)")
+        return True
+    except Exception as e:
+        print(f"[Convert] PyMuPDF4LLM失败: {e}")
+        return False
+
+def _is_stop_heading(text: str) -> bool:
+    """仅当文本像章节标题时才触发早停（避免正文误截断）。"""
+    if not text:
+        return False
+    t = text.strip().lower()
+    if len(t) > 80:
+        return False
+    import re as _re
+    return bool(_re.match(r"^[\s\(\)\[\]\-–—:,.0-9ivx]{0,8}\b(references?|acknowledg(e)?ments?|supplement(ar|al)( materials?)?|supplementary( materials?)?|appendix|appendices)\b[\s\-–—:,.]*$",
+                           t, flags=_re.I))
+
+
+def _convert_xml_with_pandoc(
+    input_xml: str,
+    output_md: str,
+    keep_sections: Optional[List[str]] = None,
+    stop_after: Optional[List[str]] = None,
+) -> bool:
+    """优先使用Pandoc将JATS(XML)转换为Markdown(仅主体章节)。"""
+    keep_str = ",".join(keep_sections or DEFAULT_SECTIONS)
+    stop_str = ",".join(stop_after or DEFAULT_STOP_AFTER)
+
+    lua_filter = Path(__file__).resolve().parent / "keep-sections.lua"
+    cmd = [
+        "pandoc",
+        str(input_xml),
+        "-f",
+        "jats",
+        "-t",
+        "gfm",
+        "--wrap=none",
+        "--lua-filter",
+        str(lua_filter),
+        "-M",
+        f"keep_sections={keep_str}",
+        "-M",
+        f"stop_after={stop_str}",
+        "-o",
+        str(output_md),
+    ]
+    try:
+        Path(output_md).parent.mkdir(parents=True, exist_ok=True)
+        import subprocess
+        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print(f"[Convert] Pandoc转换成功: {output_md}")
+        # 若输出为空则无过滤转换再Python端裁剪
+        try:
+            txt = Path(output_md).read_text(encoding='utf-8')
+        except Exception:
+            txt = ""
+        if not (txt and txt.strip()):
+            cmd2 = ["pandoc", str(input_xml), "-f", "jats", "-t", "gfm", "--wrap=none", "-o", str(output_md)]
+            subprocess.run(cmd2, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            try:
+                txt2 = Path(output_md).read_text(encoding='utf-8')
+            except Exception:
+                txt2 = ""
+            if txt2 and txt2.strip():
+                trimmed = _post_trim_markdown(txt2, keep_sections or DEFAULT_SECTIONS, stop_after or DEFAULT_STOP_AFTER)
+                Path(output_md).write_text(trimmed, encoding='utf-8')
+        return True
+    except FileNotFoundError:
+        print("[Convert] 未检测到pandoc, 回退到MarkItDown")
+        return False
+    except Exception as e:
+        print(f"[Convert] Pandoc失败: {e}")
+        return False
+
+
+def _assemble_markdown_sections_from_lines(
+    lines: List[str], wanted_sections: Optional[List[str]] = None
+) -> str:
+    """基于OCR行的启发式抽取主体章节并组装Markdown。"""
+    if not lines:
+        return ""
+
+    ws = set((wanted_sections or DEFAULT_SECTIONS))
+    lower_lines = [l.lower() for l in lines]
+
+    # 定位Abstract之前片段,用于Title/Authors
+    abs_idx = next((i for i, l in enumerate(lower_lines) if "abstract" in l), min(25, len(lines)))
+    pre_abs = lines[:abs_idx]
+    title = max(pre_abs, key=lambda s: len(s)) if pre_abs else (lines[0] if lines else "")
+
+    authors_block: List[str] = []
+    for s in pre_abs:
+        if s == title:
+            continue
+        sl = s.lower()
+        if ("," in s or " and " in sl) and len(s) < 200:
+            authors_block.append(s)
+        if "abstract" in sl:
+            break
+
+    patterns = {
+        "abstract": r"\babstract\b",
+        "introduction": r"\bintroduction\b|\bbackground\b",
+        "methods": r"\bmethods?\b|materials\s+and\s+methods|patients\s+and\s+methods",
+        "results": r"\bresults?\b",
+        "discussion": r"\bdiscussion\b",
+        "conclusion": r"\bconclusions?\b",
+    }
+
+    idx_map: Dict[str, int] = {}
+    for name, pat in patterns.items():
+        idx = next((i for i, s in enumerate(lower_lines) if re.search(pat, s)), -1)
+        if idx >= 0:
+            idx_map[name] = idx
+
+    def seg(name_from: str, next_names: List[str]) -> List[str]:
+        if name_from not in idx_map:
+            return []
+        start = idx_map[name_from] + 1
+        end = len(lines)
+        for nn in next_names:
+            if nn in idx_map and idx_map[nn] > start:
+                end = min(end, idx_map[nn])
+        return lines[start:end]
+
+    md_parts: List[str] = []
+    if "title" in ws and title:
+        md_parts.append(f"# {title}\n\n")
+    if "authors" in ws and authors_block:
+        md_parts.append(f"**Authors**: {', '.join(authors_block)}\n\n")
+    if "abstract" in ws:
+        a = seg("abstract", ["introduction"])
+        if a:
+            md_parts.append("## Abstract\n\n" + " ".join(a).strip() + "\n\n")
+    if "introduction" in ws:
+        it = seg("introduction", ["methods", "results", "discussion", "conclusion"])
+        if it:
+            md_parts.append("## Introduction\n\n" + "\n".join(it).strip() + "\n\n")
+    if "methods" in ws:
+        m = seg("methods", ["results", "discussion", "conclusion"])
+        if m:
+            md_parts.append("## Methods\n\n" + "\n".join(m).strip() + "\n\n")
+    if "results" in ws:
+        r = seg("results", ["discussion", "conclusion"])
+        if r:
+            md_parts.append("## Results\n\n" + "\n".join(r).strip() + "\n\n")
+    if "discussion" in ws:
+        d = seg("discussion", ["conclusion"])
+        if d:
+            md_parts.append("## Discussion\n\n" + "\n".join(d).strip() + "\n\n")
+    if "conclusion" in ws:
+        c = seg("conclusion", [])
+        if c:
+            md_parts.append("## Conclusion\n\n" + "\n".join(c).strip() + "\n\n")
+
+    return "".join(md_parts)
+
+
+def _ocr_pdf_to_markdown(
+    pdf_path: str,
+    md_path: str,
+    *,
+    lang: str = "en",
+    dpi: int = 180,
+    max_pages: Optional[int] = 20,
+    stop_after: Optional[List[str]] = None,
+    wanted_sections: Optional[List[str]] = None,
+    use_pp_structure: bool = True,
+) -> bool:
+    """使用PaddleOCR(+PP-Structure)对PDF执行OCR, 仅抽取主体章节, 表格以图片占位。"""
+    if not (PADDLE_AVAILABLE and Fitz and Image):
+        return False
+
+    stop_after = [s.lower() for s in (stop_after or DEFAULT_STOP_AFTER)]
+    wanted_sections = wanted_sections or DEFAULT_SECTIONS
+
+    try:
+        ocr = PaddleOCR(use_angle_cls=True, lang=lang, show_log=False)
+        pp = None
+        if use_pp_structure and PPSTRUCT_AVAILABLE:
+            try:
+                pp = PPStructure(layout=True, show_log=False)
+            except Exception:
+                pp = None
+
+        doc = Fitz.open(pdf_path)
+        total_pages = len(doc)
+        limit = min(total_pages, max_pages or total_pages)
+
+        # 小规模线程页预渲染（OCR仍单实例串行）
+        def _render(idx: int):
+            d = Fitz.open(pdf_path)
+            try:
+                page = d[idx]
+                zoom = dpi / 72.0
+                mat = Fitz.Matrix(zoom, zoom)
+                pix = page.get_pixmap(matrix=mat, alpha=False)
+                from io import BytesIO
+                img_bytes = pix.tobytes("png")
+                return idx, Image.open(BytesIO(img_bytes)).convert("RGB")
+            finally:
+                d.close()
+
+        try:
+            cpu = os.cpu_count() or 4
+            threads = max(2, min(4, cpu - 2))
+        except Exception:
+            threads = 2
+
+        rendered: Dict[int, "PIL.Image.Image"] = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as ex:
+            for idx, im in ex.map(_render, range(limit)):
+                rendered[idx] = im
+
+        all_lines: List[str] = []
+        # 资产目录: {stem}_assets
+        stem = Path(md_path).with_suffix("").name
+        assets_dir_path = Path(md_path).parent / f"{stem}_assets"
+        assets_dir_path.mkdir(parents=True, exist_ok=True)
+
+        references_seen = False
+        for page_idx in range(limit):
+            if references_seen:
+                break
+            # 取预渲染图像，兜底单页渲染
+            im = rendered.get(page_idx)
+            if im is None:
+                _, im = _render(page_idx)
+            img_np = np.array(im) if np is not None else None
+
+            page_lines: List[str] = []
+
+            if pp is not None and img_np is not None:
+                # PP-Structure版面/表格检测
+                try:
+                    res = pp(img_np)
+                    W, H = im.size
+                    top_m = 0.08 * H
+                    bot_m = H - 0.08 * H
+                    left_m = 0.06 * W
+                    right_m = W - 0.06 * W
+                    min_sidebar_w = 0.18 * W
+                    tcount = 0
+                    fcount = 0
+                    for block in res:
+                        btype = str(block.get("type", "")).lower()
+                        box = block.get("bbox") or block.get("box")
+                        if box:
+                            x1, y1, x2, y2 = map(int, box)
+                            bw = max(0, x2 - x1)
+                            # 过滤页眉/页脚与侧边栏
+                            if y1 < top_m or y2 > bot_m:
+                                continue
+                            if bw < min_sidebar_w and (x1 < left_m or x2 > right_m):
+                                continue
+                        if btype in ("table", "figure") and box:
+                            # 裁剪并保存为占位图
+                            x1, y1, x2, y2 = map(int, box)
+                            crop = im.crop((x1, y1, x2, y2))
+                            if btype == "table":
+                                tcount += 1
+                                img_name = f"page{page_idx+1}_table{tcount}.png"
+                            else:
+                                fcount += 1
+                                img_name = f"page{page_idx+1}_figure{fcount}.png"
+                            out_path = assets_dir_path / img_name
+                            crop.save(out_path)
+                            page_lines.append(f"![{btype}]({assets_dir_path.name}/{img_name})")
+                        else:
+                            ocr_res = block.get("res")
+                            if isinstance(ocr_res, list):
+                                # 若为标题块且是早停章节标题，直接终止
+                                if btype == "title":
+                                    title_text = " ".join([it.get("text", "") for it in ocr_res if isinstance(it, dict)]).strip()
+                                    if _is_stop_heading(title_text):
+                                        references_seen = True
+                                        break
+                                for item in ocr_res:
+                                    txt = item.get("text")
+                                    if txt:
+                                        page_lines.append(txt.strip())
+                except Exception:
+                    pp = None  # 失败后禁用, 退回整页OCR
+
+            if pp is None:
+                # 整页OCR
+                try:
+                    result = ocr.ocr(img_np if img_np is not None else im, cls=True)
+                    items: List[Tuple[float, str]] = []
+                    if result and result[0]:
+                        for det in result[0]:
+                            try:
+                                box, (txt, conf) = det
+                                if not txt or not isinstance(txt, str):
+                                    continue
+                                xs = [p[0] for p in box]; ys = [p[1] for p in box]
+                                W, H = im.size
+                                top_m = 0.08 * H
+                                bot_m = H - 0.08 * H
+                                left_m = 0.06 * W
+                                right_m = W - 0.06 * W
+                                min_sidebar_w = 0.18 * W
+                                x1, y1, x2, y2 = min(xs), min(ys), max(xs), max(ys)
+                                bw = max(0, x2 - x1)
+                                # 过滤页眉/页脚与侧边栏
+                                if y1 < top_m or y2 > bot_m:
+                                    continue
+                                if bw < min_sidebar_w and (x1 < left_m or x2 > right_m):
+                                    continue
+                                # 标题级早停
+                                if _is_stop_heading(txt):
+                                    references_seen = True
+                                    break
+                                y_avg = sum(ys) / 4.0
+                                items.append((y_avg, txt.strip()))
+                            except Exception:
+                                continue
+                    items.sort(key=lambda x: x[0])
+                    page_lines.extend([t for _, t in items if t])
+                except Exception as e:
+                    print(f"[OCR] 第{page_idx+1}页失败: {e}")
+
+            # 早停(逐行检测): 命中stop_after则截断当前页并停止后续页
+            stop_idx = None
+            for _i, _line in enumerate(page_lines):
+                _ll = _line.lower()
+                if any(k in _ll for k in stop_after):
+                    stop_idx = _i
+                    break
+            if stop_idx is not None:
+                page_lines = page_lines[:stop_idx]
+                references_seen = True
+
+            all_lines.extend(page_lines)
+
+        md = _assemble_markdown_sections_from_lines(all_lines, wanted_sections)
+        if not md:
+            return False
+
+        Path(md_path).parent.mkdir(parents=True, exist_ok=True)
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write(md)
+        print(f"[Convert] PDF转换成功(PaddleOCR)")
+        return True
+
+    except Exception as e:
+        print(f"[OCR] 处理失败: {e}")
+        return False
+
+
+def convert_to_markdown(
+    input_path: str,
+    output_path: str,
+    *,
+    prefer_ocr: bool = True,
+    use_pymupdf4llm: bool = False,
+    wanted_sections: Optional[List[str]] = None,
+    ocr_lang: str = "en",
+    dpi: int = 180,
+    max_pages: Optional[int] = 20,
+    stop_after: Optional[List[str]] = None,
+    use_pp_structure: bool = True,
+) -> bool:
+    """根据文件类型选择最优转换路径(仅主体章节)。
+
+    限制重试: 最多尝试3次不同转换路径, 避免无限循环。
+    """
+    print(f"[Convert] 转换文件: {input_path} → {output_path}")
+
+    ext = Path(input_path).suffix.lower()
+    attempts = 0
+    MAX_RETRIES = 3
+
+    # PDF: 若启用，则优先尝试 PyMuPDF4LLM
+    if ext == ".pdf" and use_pymupdf4llm:
+        if attempts < MAX_RETRIES and _convert_pdf_with_pymupdf4llm(
+            input_path,
+            output_path,
+            keep_sections=wanted_sections,
+            stop_after=stop_after,
+        ):
+            return True
+        attempts += 1
+
+    # PDF: 默认优先OCR
+    if ext == ".pdf" and prefer_ocr:
+        if attempts < MAX_RETRIES and _ocr_pdf_to_markdown(
+            input_path,
+            output_path,
+            lang=ocr_lang,
+            dpi=dpi,
+            max_pages=max_pages,
+            stop_after=stop_after,
+            wanted_sections=wanted_sections,
+            use_pp_structure=use_pp_structure,
+        ):
+            return True
+        attempts += 1
+
+    # XML: 默认优先Pandoc
+    if ext in (".xml", ".nxml"):
+        if attempts < MAX_RETRIES and _convert_xml_with_pandoc(
+            input_path,
+            output_path,
+            keep_sections=wanted_sections,
+            stop_after=stop_after,
+        ):
+            return True
+        attempts += 1
+
+    # MarkItDown尝试
+    if attempts < MAX_RETRIES:
+        try:
+            from markitdown import MarkItDown
+            md_converter = MarkItDown()
+            result = md_converter.convert(input_path)
+            if result and result.text_content:
+                Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    f.write(result.text_content)
+                print(f"[Convert] 转换成功(MarkItDown): {output_path}")
+                return True
+        except Exception as e:
+            print(f"[Convert] MarkItDown失败: {e}")
+        finally:
+            attempts += 1
+
+    # PDF备用 pdfplumber
+    if ext == ".pdf":
+        if attempts < MAX_RETRIES:
+            try:
+                import pdfplumber
+                markdown_content: List[str] = []
+                with pdfplumber.open(input_path) as pdf:
+                    for page_num, page in enumerate(pdf.pages, 1):
+                        if max_pages and page_num > max_pages:
+                            break
+                        text = page.extract_text()
+                        if text:
+                            markdown_content.append(f"## Page {page_num}\n\n{text}\n\n")
+                if markdown_content:
+                    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+                    with open(output_path, 'w', encoding='utf-8') as f:
+                        f.write("".join(markdown_content))
+                    print(f"[Convert] PDF转换成功(pdfplumber)")
+                    return True
+            except Exception as e:
+                print(f"[Convert] pdfplumber失败: {e}")
+            finally:
+                attempts += 1
+
+        # 最终兜底再尝试一次OCR
+        if attempts < MAX_RETRIES and _ocr_pdf_to_markdown(
+            input_path,
+            output_path,
+            lang=ocr_lang,
+            dpi=dpi,
+            max_pages=max_pages,
+            stop_after=stop_after,
+            wanted_sections=wanted_sections,
+            use_pp_structure=use_pp_structure,
+        ):
+            return True
+        attempts += 1
+
+    # XML回退: BeautifulSoup
+    if attempts < MAX_RETRIES and ext in (".xml", ".nxml"):
+        return _fallback_convert(input_path, output_path)
+
+    # 其他格式回退
+    if attempts < MAX_RETRIES:
+        return _fallback_convert(input_path, output_path)
+    return False
+
+
+def _fallback_convert(input_path: str, output_path: str) -> bool:
+    """备用转换方法(使用pdfplumber/python-docx/BeautifulSoup)"""
+    ext = Path(input_path).suffix.lower()
+
+    try:
+        if ext == '.pdf':
+            # 使用pdfplumber
+            import pdfplumber
+            markdown_content = []
+
+            with pdfplumber.open(input_path) as pdf:
+                for page_num, page in enumerate(pdf.pages, 1):
+                    text = page.extract_text()
+                    if text:
+                        markdown_content.append(f"## Page {page_num}\n\n{text}\n\n")
+
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write("".join(markdown_content))
+
+            print(f"[Convert] PDF转换成功(pdfplumber)")
+            return True
+
+        elif ext == '.xml' or ext == '.nxml':
+            # 使用BeautifulSoup解析XML
+            from bs4 import BeautifulSoup
+
+            with open(input_path, 'r', encoding='utf-8') as f:
+                soup = BeautifulSoup(f, 'xml')
+
+            # 提取标题、摘要、正文
+            markdown_parts = []
+
+            title = soup.find('article-title')
+            if title:
+                markdown_parts.append(f"# {title.get_text()}\n\n")
+
+            abstract = soup.find('abstract')
+            if abstract:
+                markdown_parts.append(f"## Abstract\n\n{abstract.get_text()}\n\n")
+
+            body = soup.find('body')
+            if body:
+                # 按章节提取
+                for sec in body.find_all('sec'):
+                    sec_title = sec.find('title')
+                    if sec_title:
+                        markdown_parts.append(f"## {sec_title.get_text()}\n\n")
+
+                    for p in sec.find_all('p', recursive=False):
+                        markdown_parts.append(f"{p.get_text()}\n\n")
+
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write("".join(markdown_parts))
+
+            print(f"[Convert] XML转换成功(BeautifulSoup)")
+            return True
+
+        else:
+            print(f"[Convert] 不支持的格式: {ext}")
+            return False
+
+    except Exception as e:
+        print(f"[Convert] 备用转换失败: {e}")
+        return False
+
+
+def download_single_paper(
+    doi: Optional[str] = None,
+    pmid: Optional[str] = None,
+    pmcid: Optional[str] = None,
+    url: Optional[str] = None,
+    output_dir: str = "papers",
+    convert_md: bool = True,
+    *,
+    prefer_ocr: bool = True,
+    use_pymupdf4llm: bool = False,
+    wanted_sections: Optional[List[str]] = None,
+    ocr_lang: str = "en",
+    dpi: int = 180,
+    max_pages: Optional[int] = 20,
+    stop_after: Optional[List[str]] = None,
+    use_pp_structure: bool = True,
+) -> bool:
+    """
+    下载单篇文献并转换为Markdown
+
+    Args:
+        doi: 论文DOI
+        pmid: PubMed ID
+        pmcid: PMC ID (如PMC10594178)
+        url: 论文URL
+        output_dir: 输出目录
+        convert_md: 是否转换为Markdown
+
+    Returns:
+        下载是否成功
+    """
+    identifier = doi or pmid or pmcid or url
+    if not identifier:
+        print("[错误] 必须提供DOI、PMID、PMCID或URL")
+        return False
+
+    # 生成文件名(使用DOI作为主文件名)
+    safe_name = (doi or pmid or pmcid or url).replace("/", "_").replace(":", "_").replace(".", "_")
+    pdf_path = os.path.join(output_dir, f"{safe_name}.pdf")
+    xml_path = os.path.join(output_dir, f"{safe_name}.xml")
+    md_path = os.path.join(output_dir, f"{safe_name}.md")
+
+    # 策略1: 尝试PMC OA (优先使用PMCID,其次PMID,最后DOI)
+    xml_file = None
+    pmc_identifier = pmcid or pmid or doi
+    if pmc_identifier:
+        xml_file = download_via_pmc(pmc_identifier, output_dir)
+        if xml_file and convert_md:
+            if convert_to_markdown(
+                xml_file,
+                md_path,
+                prefer_ocr=prefer_ocr,
+                use_pymupdf4llm=use_pymupdf4llm,
+                wanted_sections=wanted_sections,
+                ocr_lang=ocr_lang,
+                dpi=dpi,
+                max_pages=max_pages,
+                stop_after=stop_after,
+                use_pp_structure=use_pp_structure,
+            ):
+                print(f"[成功] XML → Markdown: {md_path}")
+                return True
+
+    # 策略2: 尝试Sci-Hub下载PDF
+    if download_via_scihub(identifier, pdf_path):
+        if convert_md:
+            if convert_to_markdown(
+                pdf_path,
+                md_path,
+                prefer_ocr=prefer_ocr,
+                use_pymupdf4llm=use_pymupdf4llm,
+                wanted_sections=wanted_sections,
+                ocr_lang=ocr_lang,
+                dpi=dpi,
+                max_pages=max_pages,
+                stop_after=stop_after,
+                use_pp_structure=use_pp_structure,
+            ):
+                print(f"[成功] PDF → Markdown: {md_path}")
+                return True
+        else:
+            print(f"[成功] PDF已下载: {pdf_path}")
+            return True
+
+    print(f"[失败] 无法下载: {identifier}")
+    return False
+
+
+def _post_trim_markdown(md_text: str, keep_sections: List[str], stop_after: List[str]) -> str:
+    """对Pandoc输出的Markdown进行二次裁剪: 仅主体章节 + 早停。"""
+    lines = md_text.splitlines()
+    out: List[str] = []
+    stop_after_l = [s.lower() for s in stop_after]
+    keep_l = [s.lower() for s in keep_sections]
+
+    # 标题原样保留
+    if lines and lines[0].startswith('# '):
+        out.append(lines[0])
+        out.append('')
+
+    sect_map = {
+        'abstract': ['abstract'],
+        'introduction': ['introduction', 'background'],
+        'methods': ['methods', 'materials and methods', 'patients and methods'],
+        'results': ['results'],
+        'discussion': ['discussion'],
+        'conclusion': ['conclusion', 'conclusions'],
+    }
+
+    i = 0
+    n = len(lines)
+    while i < n:
+        line = lines[i]
+        l = line.strip().lower()
+        if any(k in l for k in stop_after_l):
+            break
+        if line.startswith('## '):
+            title = line[3:].strip().lower()
+            keep_this = False
+            for key, kws in sect_map.items():
+                if key in keep_l and any(kw in title for kw in kws):
+                    keep_this = True
+                    break
+            j = i + 1
+            while j < n and not lines[j].startswith('## '):
+                if any(k in lines[j].lower() for k in stop_after_l):
+                    n = j
+                    break
+                j += 1
+            if keep_this:
+                out.extend(lines[i:j])
+                out.append('')
+            i = j
+            continue
+        i += 1
+
+    text = '\n'.join(out).strip() or md_text
+    return text
+
+
+def batch_download(
+    input_json: str,
+    output_dir: str,
+    *,
+    prefer_ocr: bool = True,
+    use_pymupdf4llm: bool = False,
+    wanted_sections: Optional[List[str]] = None,
+    ocr_lang: str = "en",
+    dpi: int = 180,
+    max_pages: Optional[int] = 20,
+    stop_after: Optional[List[str]] = None,
+    use_pp_structure: bool = True,
+    render_threads: Optional[int] = None,
+    workers: Optional[int] = None,
+) -> bool:
+    """
+    批量下载文献
+
+    Args:
+        input_json: 包含论文列表的JSON文件
+        output_dir: 输出目录
+
+    Returns:
+        是否至少成功下载一篇
+    """
+    print("=" * 60)
+    print("批量文献下载")
+    print("=" * 60)
+
+    try:
+        with open(input_json, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        papers = data.get("papers", [])
+        total = len(papers)
+
+        print(f"总计: {total} 篇文献")
+        print(f"输出目录: {output_dir}\n")
+
+        success_count = 0
+        failed_papers = []
+
+        # 文献级并行: 自适应2-4个进程（workers=None或'auto'）
+        if not workers:
+            try:
+                cpu = os.cpu_count() or 4
+                workers = max(2, min(4, cpu - 2))
+            except Exception:
+                workers = 2
+
+        def _process_one(idx_paper):
+            i, paper = idx_paper
+            doi = paper.get("doi")
+            pmid = paper.get("pmid")
+            pmcid = paper.get("pmcid")
+            title = paper.get("title", "Unknown")[:60]
+            print(f"[{i}/{total}] {title}")
+            ok = download_single_paper(
+                doi=doi,
+                pmid=pmid,
+                pmcid=pmcid,
+                output_dir=output_dir,
+                prefer_ocr=prefer_ocr,
+                use_pymupdf4llm=use_pymupdf4llm,
+                wanted_sections=wanted_sections,
+                ocr_lang=ocr_lang,
+                dpi=dpi,
+                max_pages=max_pages,
+                stop_after=stop_after,
+                use_pp_structure=use_pp_structure,
+            )
+            return (i, title, ok, doi)
+
+        # 线程池(文献级并行)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
+            for i, title, ok, doi in ex.map(_process_one, list(enumerate(papers, 1))):
+                if ok:
+                    success_count += 1
+                    print(f"  ✓ 成功\n")
+                else:
+                    failed_papers.append({"title": title, "doi": doi})
+                    print(f"  ✗ 失败\n")
+
+        # 摘要
+        print("=" * 60)
+        print("批量下载完成")
+        print("=" * 60)
+        print(f"成功: {success_count}/{total}")
+        print(f"失败: {len(failed_papers)}/{total}")
+
+        if failed_papers:
+            print(f"\n失败列表:")
+            for paper in failed_papers:
+                print(f"  - {paper['title']}")
+
+        return success_count > 0
+
+    except Exception as e:
+        print(f"[错误] 批量处理失败: {e}")
+        return False
+
+
+def main():
+    parser = argparse.ArgumentParser(description="文献下载与转换工具")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # 单篇下载
+    download_parser = subparsers.add_parser("download", help="下载单篇文献")
+    download_parser.add_argument("--doi", help="论文DOI")
+    download_parser.add_argument("--pmid", help="PubMed ID")
+    download_parser.add_argument("--url", help="论文URL")
+    download_parser.add_argument("--output", default="papers", help="输出目录")
+    download_parser.add_argument("--no-convert", action="store_true", help="不转换为Markdown")
+    download_parser.add_argument("--prefer-ocr", action="store_true", default=True, help="(PDF) 优先使用PaddleOCR仅抽取主体章节")
+    download_parser.add_argument("--use-pymupdf4llm", action="store_true", default=False, help="(PDF) 优先使用PyMuPDF4LLM解析")
+    download_parser.add_argument("--sections", default=",".join(DEFAULT_SECTIONS), help="仅抽取这些章节, 逗号分隔")
+    download_parser.add_argument("--ocr-lang", default="en", help="OCR语言, 默认en")
+    download_parser.add_argument("--dpi", type=int, default=180, help="渲染DPI, 默认180")
+    download_parser.add_argument("--max-pages", type=int, default=20, help="最大处理页数, 默认20")
+    download_parser.add_argument("--stop-after", default=",".join(DEFAULT_STOP_AFTER), help="遇到这些关键字停止, 逗号分隔")
+    download_parser.add_argument("--no-pp-structure", action="store_true", help="禁用PP-Structure版面/表格增强")
+
+    # 批量下载
+    batch_parser = subparsers.add_parser("batch", help="批量下载文献")
+    batch_parser.add_argument("--input", required=True, help="输入JSON文件")
+    batch_parser.add_argument("--output", required=True, help="输出目录")
+    batch_parser.add_argument("--workers", default="auto", help="文献级并行线程数, auto为2-4自适应")
+    batch_parser.add_argument("--render-threads", default="auto", help="PDF页渲染线程数, auto为2-4自适应")
+    batch_parser.add_argument("--prefer-ocr", action="store_true", default=True, help="(PDF) 优先使用PaddleOCR仅抽取主体章节")
+    batch_parser.add_argument("--use-pymupdf4llm", action="store_true", default=False, help="(PDF) 优先使用PyMuPDF4LLM解析")
+    batch_parser.add_argument("--sections", default=",".join(DEFAULT_SECTIONS), help="仅抽取这些章节, 逗号分隔")
+    batch_parser.add_argument("--ocr-lang", default="en", help="OCR语言, 默认en")
+    batch_parser.add_argument("--dpi", type=int, default=180, help="渲染DPI, 默认180")
+    batch_parser.add_argument("--max-pages", type=int, default=20, help="最大处理页数, 默认20")
+    batch_parser.add_argument("--stop-after", default=",".join(DEFAULT_STOP_AFTER), help="遇到这些关键字停止, 逗号分隔")
+    batch_parser.add_argument("--no-pp-structure", action="store_true", help="禁用PP-Structure版面/表格增强")
+
+    # 转换命令
+    convert_parser = subparsers.add_parser("convert", help="转换文件为Markdown")
+    convert_parser.add_argument("--input", required=True, help="输入文件")
+    convert_parser.add_argument("--output", required=True, help="输出Markdown文件")
+    convert_parser.add_argument("--prefer-ocr", action="store_true", default=True, help="(PDF) 优先使用PaddleOCR仅抽取主体章节")
+    convert_parser.add_argument("--use-pymupdf4llm", action="store_true", default=False, help="(PDF) 优先使用PyMuPDF4LLM解析")
+    convert_parser.add_argument("--sections", default=",".join(DEFAULT_SECTIONS), help="仅抽取这些章节, 逗号分隔")
+    convert_parser.add_argument("--ocr-lang", default="en", help="OCR语言, 默认en")
+    convert_parser.add_argument("--dpi", type=int, default=180, help="渲染DPI, 默认180")
+    convert_parser.add_argument("--max-pages", type=int, default=20, help="最大处理页数, 默认20")
+    convert_parser.add_argument("--stop-after", default=",".join(DEFAULT_STOP_AFTER), help="遇到这些关键字停止, 逗号分隔")
+    convert_parser.add_argument("--no-pp-structure", action="store_true", help="禁用PP-Structure版面/表格增强")
+
+    args = parser.parse_args()
+
+    if args.command == "download":
+        wanted = [s.strip() for s in (args.sections or "").split(",") if s.strip()]
+        stop_list = [s.strip() for s in (args.stop_after or "").split(",") if s.strip()]
+        success = download_single_paper(
+            doi=args.doi,
+            pmid=args.pmid,
+            url=args.url,
+            output_dir=args.output,
+            convert_md=not args.no_convert,
+            prefer_ocr=args.prefer_ocr,
+            use_pymupdf4llm=args.use_pymupdf4llm,
+            wanted_sections=wanted,
+            ocr_lang=args.ocr_lang,
+            dpi=args.dpi,
+            max_pages=args.max_pages,
+            stop_after=stop_list,
+            use_pp_structure=(not args.no_pp_structure),
+        )
+    elif args.command == "batch":
+        wanted = [s.strip() for s in (args.sections or "").split(",") if s.strip()]
+        stop_list = [s.strip() for s in (args.stop_after or "").split(",") if s.strip()]
+        # 解析并行参数
+        rt = args.render_threads
+        try:
+            rt_val = int(rt)
+        except Exception:
+            rt_val = None
+        wk = args.workers
+        try:
+            wk_val = int(wk)
+        except Exception:
+            wk_val = None
+        success = batch_download(
+            args.input,
+            args.output,
+            prefer_ocr=args.prefer_ocr,
+            use_pymupdf4llm=args.use_pymupdf4llm,
+            wanted_sections=wanted,
+            ocr_lang=args.ocr_lang,
+            dpi=args.dpi,
+            max_pages=args.max_pages,
+            stop_after=stop_list,
+            use_pp_structure=(not args.no_pp_structure),
+            render_threads=rt_val,
+            workers=wk_val,
+        )
+    elif args.command == "convert":
+        wanted = [s.strip() for s in (args.sections or "").split(",") if s.strip()]
+        stop_list = [s.strip() for s in (args.stop_after or "").split(",") if s.strip()]
+        success = convert_to_markdown(
+            args.input,
+            args.output,
+            prefer_ocr=args.prefer_ocr,
+            use_pymupdf4llm=args.use_pymupdf4llm,
+            wanted_sections=wanted,
+            ocr_lang=args.ocr_lang,
+            dpi=args.dpi,
+            max_pages=args.max_pages,
+            stop_after=stop_list,
+            use_pp_structure=(not args.no_pp_structure),
+        )
+
+    sys.exit(0 if success else 1)
+
+
+if __name__ == "__main__":
+    main()
