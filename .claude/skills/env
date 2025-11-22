@@ -1,0 +1,55 @@
+# Manuscript Agent - API Configuration Template
+#
+# 说明: 复制此文件为 .env 并填写相应的配置信息
+# Usage: Copy this file to .env and fill in your configuration
+#
+# ============================================================
+# 必需配置 (Required Configuration)
+# ============================================================
+
+# PubMed API 配置 (NCBI E-utilities,免费,需邮箱)
+# PubMed API Configuration (NCBI E-utilities, free, email required)
+NCBI_EMAIL=yangyuhang200325@gmail.com
+# OpenAlex API 配置 (免费,无需API密钥,仅需邮箱用于访问polite pool)
+# OpenAlex API Configuration (Free - no API key needed, email for polite pool access)
+OPENALEX_EMAIL=yangyuhang200325@gmail.com
+
+# Unpaywall API 配置 (免费,无需API密钥,仅需邮箱)
+# Unpaywall API Configuration (Free - no API key needed, just email)
+UNPAYWALL_EMAIL=yangyuhang200325@gmail.com
+
+# MinerU API 配置，用于将PDF格式的文献解析为markdown格式（2000页优先解析/天，10000文件/天）
+# 提交任务接口 ：单个文件解析--创建解析任务、批量文件解析--文件批量上传解析及批量文件解析--urls批量上传解析共用一个频控，300次/分钟
+# 获取任务结果 ：获取单个任务结果、批量获取任务结果共用一个频控，1000次/分钟，单个用户一天最多允许上传1万个文件
+MINERU_API_TOKEN=eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFM1MTIifQ.eyJqdGkiOiI5NDkwMDg0OSIsInJvbCI6IlJPTEVfUkVHSVNURVIiLCJpc3MiOiJPcGVuWExhYiIsImlhdCI6MTc2MzY0NTE2NywiY2xpZW50SWQiOiJsa3pkeDU3bnZ5MjJqa3BxOXgydyIsInBob25lIjoiIiwib3BlbklkIjpudWxsLCJ1dWlkIjoiMWE3ZTcwZjctN2EwZi00NWMxLTkyNTgtMTdlZGQxNjVlOWE3IiwiZW1haWwiOiJ5YW5neXVoYW5nMjAwMzI1QGdtYWlsLmNvbSIsImV4cCI6MTc2NDg1NDc2N30.fUpIMBmsKQ1r3JjcD4DAb5My3OU6v_7ZYP7Nn3sIO-cyR8pl3y1XZZvggwvMK9bWE8P0dpr0G51XTD5hnWx2YQ
+# yyl
+MINERU_API_TOKEN_1=eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFM1MTIifQ.eyJqdGkiOiIzMzUwMDYxOCIsInJvbCI6IlJPTEVfUkVHSVNURVIiLCJpc3MiOiJPcGVuWExhYiIsImlhdCI6MTc2Mjg2MjcyMiwiY2xpZW50SWQiOiJsa3pkeDU3bnZ5MjJqa3BxOXgydyIsInBob25lIjoiMTg5NTYzMDM5MjAiLCJvcGVuSWQiOm51bGwsInV1aWQiOiJkMDAwMjA0Mi05YTRhLTQ4NTYtOTIzNC1lNGI3ZTc4OGViY2QiLCJlbWFpbCI6IiIsImV4cCI6MTc2NDA3MjMyMn0.53Zu4ckCAY1p0Yr8SRcCHfcRjG3H19ERJMUtlmKD4_PoCZypFMpxQ_fvMvn1Dvl_gqF22vG1cTBxz6UIaHkO0Q
+# wzw
+MINERU_API_TOKEN_2=eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFM1MTIifQ.eyJqdGkiOiIyNDMwMDAxNyIsInJvbCI6IlJPTEVfUkVHSVNURVIiLCJpc3MiOiJPcGVuWExhYiIsImlhdCI6MTc2MjkyMDQ2MywiY2xpZW50SWQiOiJsa3pkeDU3bnZ5MjJqa3BxOXgydyIsInBob25lIjoiIiwib3BlbklkIjpudWxsLCJ1dWlkIjoiZjcxMjk1OTMtNWVjNS00ZWEyLTk2NjctZDQ1N2YwMzJkOTFiIiwiZW1haWwiOiIiLCJleHAiOjE3NjQxMzAwNjN9.yGPSRIIJsd8AvujmBUkez-r4j3bq7IBMHXthrFKAfevOQgQhSMEH83qkDsdYLHc8dfnBdKyrmLkNN7F0epXvoA
+
+MINERU_API_TOKEN_3=eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFM1MTIifQ.eyJqdGkiOiI5NDkwMDg0OSIsInJvbCI6IlJPTEVfUkVHSVNURVIiLCJpc3MiOiJPcGVuWExhYiIsImlhdCI6MTc2MzY5NDc3MSwiY2xpZW50SWQiOiJsa3pkeDU3bnZ5MjJqa3BxOXgydyIsInBob25lIjoiIiwib3BlbklkIjpudWxsLCJ1dWlkIjoiNTVjMDc5NTgtZDM3Mi00YzI5LWFjMWQtNWJlOTM4YTg5MTU1IiwiZW1haWwiOiJ5YW5neXVoYW5nMjAwMzI1QGdtYWlsLmNvbSIsImV4cCI6MTc2NDkwNDM3MX0.sytmK9__Xx2TgnaJ9BXLNWpJnuFW_B49Un0H9xoNmVdabLj8dfTpqFfU1DmUpAaBFGklgLAAi-glNj0SfpWrjA
+MINERU_API_TOKEN_4=eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFM1MTIifQ.eyJqdGkiOiI5NDkwMDg0OSIsInJvbCI6IlJPTEVfUkVHSVNURVIiLCJpc3MiOiJPcGVuWExhYiIsImlhdCI6MTc2MzY5NDc5NCwiY2xpZW50SWQiOiJsa3pkeDU3bnZ5MjJqa3BxOXgydyIsInBob25lIjoiIiwib3BlbklkIjpudWxsLCJ1dWlkIjoiZTBiMTZjODgtYmU0NC00YTRhLTgyOGItNWVhYzA1M2YyYjliIiwiZW1haWwiOiJ5YW5neXVoYW5nMjAwMzI1QGdtYWlsLmNvbSIsImV4cCI6MTc2NDkwNDM5NH0.gMwGvWXMmhyipeSMqtqbMsJDsB-kjpAcOO0-L-XXNNbFkHANnOkKnmkqYRLzuAYIyURplPC5BDcmncUVFkBr_w
+
+
+
+MINERU_BASE_URL=https://mineru.net
+MINERU_MODEL_VERSION=vlm # 可选: pipeline / vlm
+MINERU_SUBMIT_RPM=300 #提交任务
+MINERU_POLL_RPM=1000 # 获取结果
+# MINERU_PROXIES=http://127.0.0.1:7890
+# MINERU_TRUST_ENV=0
+
+# 可选：对Pandoc输出markdown的H1/H2标题做截断（1启用，0关闭）
+PANDOC_HEADING_TRIM=1
+
+# ============================================================
+# 可选扩展配置 (Optional Extension Configuration)
+# ============================================================
+
+# PubMed API 密钥 (可选,提供后速率限制从3请求/秒提升至10请求/秒)
+# PubMed API Key (optional, increases rate limit from 3 to 10 requests/second)
+#
+# 申请地址: https://www.ncbi.nlm.nih.gov/account/settings/
+# Apply at: https://www.ncbi.nlm.nih.gov/account/settings/
+#
+NCBI_API_KEY=803efb4b352e0e8bbe4fee265ba8762e1d09
